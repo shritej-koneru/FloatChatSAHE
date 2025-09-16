@@ -1,12 +1,17 @@
-// Fake dataset values for now.
-// Later we can connect to Sheets/output.xlsx via a backend.
-const dataset = {
-  lat: { min: -60, max: -50 },
-  lon: { min: -10, max: 10 },
-  temperature: { min: -2, max: 30 },
-  salinity: { min: 30, max: 40 },
-  pressure: { min: 0, max: 2000 }
-};
+let dataset = null;
+
+// Fetch dataset ranges on load
+async function loadData() {
+  try {
+    const response = await fetch("http://127.0.0.1:5000/api/ranges");
+    dataset = await response.json();
+    console.log("Dataset loaded:", dataset);
+  } catch (err) {
+    console.error("Error loading dataset:", err);
+  }
+}
+
+window.onload = loadData;
 
 function sendMessage() {
   const input = document.getElementById("userInput");
@@ -20,14 +25,18 @@ function sendMessage() {
   let response = "Not found in database.";
   const lower = userText.toLowerCase();
 
-  if (lower.includes("temperature")) {
-    response = `Temperature records range from ${dataset.temperature.min}°C to ${dataset.temperature.max}°C.`;
-  } else if (lower.includes("salinity")) {
-    response = `Salinity records range from ${dataset.salinity.min} PSU to ${dataset.salinity.max} PSU.`;
-  } else if (lower.includes("pressure")) {
-    response = `Pressure records range from ${dataset.pressure.min} dbar to ${dataset.pressure.max} dbar.`;
-  } else if (lower.includes("location") || lower.includes("latitude") || lower.includes("longitude")) {
-    response = `Float positions range from lat ${dataset.lat.min} to ${dataset.lat.max}, lon ${dataset.lon.min} to ${dataset.lon.max}.`;
+  if (dataset) {
+    if (lower.includes("temperature")) {
+      response = `Temperature records range from ${dataset.temperature.min}°C to ${dataset.temperature.max}°C.`;
+    } else if (lower.includes("salinity")) {
+      response = `Salinity records range from ${dataset.salinity.min} PSU to ${dataset.salinity.max} PSU.`;
+    } else if (lower.includes("pressure")) {
+      response = `Pressure records range from ${dataset.pressure.min} dbar to ${dataset.pressure.max} dbar.`;
+    } else if (lower.includes("location") || lower.includes("latitude") || lower.includes("longitude")) {
+      response = `Float positions range from lat ${dataset.lat.min} to ${dataset.lat.max}, lon ${dataset.lon.min} to ${dataset.lon.max}.`;
+    }
+  } else {
+    response = "Error: dataset not loaded.";
   }
 
   // Display bot response
