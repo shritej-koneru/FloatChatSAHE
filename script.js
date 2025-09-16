@@ -1,4 +1,3 @@
-```javascript
 // Fake dataset values for now.
 // Later we can connect to Sheets/output.xlsx via a backend.
 const dataset = {
@@ -36,4 +35,3 @@ function sendMessage() {
   chatBox.scrollTop = chatBox.scrollHeight;
   input.value = "";
 }
-```
