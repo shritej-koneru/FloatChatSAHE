@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloatChat ARGO</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="sidebar">
+    <h2>FloatChat ARGO</h2>
+    <button class="dev-btn">Accounts</button>
+    <button class="dev-btn">History</button>
+    <hr>
+    <h3>Filters</h3>
+    <div class="filter-section">
+      <label for="dateRange">Date Range:</label>
+      <input type="date" id="startDate" name="startDate">
+      <input type="date" id="endDate" name="endDate">
+      
+      <label for="region">Region:</label>
+      <select id="region" name="region">
+        <option value="">All Regions</option>
+        <option value="atlantic">Atlantic Ocean</option>
+        <option value="pacific">Pacific Ocean</option>
+        <option value="indian">Indian Ocean</option>
+        <option value="arctic">Arctic Ocean</option>
+      </select>
+      
+      <label for="parameter">Parameter:</label>
+      <select id="parameter" name="parameter">
+        <option value="">All Parameters</option>
+        <option value="temperature">Temperature</option>
+        <option value="salinity">Salinity</option>
+        <option value="pressure">Pressure</option>
+        <option value="oxygen">Dissolved Oxygen</option>
+      </select>
+    </div>
+    
+    <h3>Export</h3>
+    <div class="export-section">
+      <button class="export-btn" onclick="exportData('csv')">Export CSV</button>
+      <button class="export-btn" onclick="exportData('json')">Export JSON</button>
+      <button class="export-btn" onclick="generateReport()">Generate Report</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <h2>Chat with ARGO Float Data</h2>
+    <div class="chat-box" id="chatBox">
+      <div class="message bot-message">
+        <div class="message-content">
+          <p>Hello! I'm your ARGO float data assistant. Ask me about:</p>
+          <ul>
+            <li>Temperature and salinity measurements</li>
+            <li>Ocean pressure data</li>
+            <li>Float locations and trajectories</li>
+            <li>Data analysis and trends</li>
+            <li>Specific time periods or regions</li>
+          </ul>
+          <p>Try asking: "Show me temperature data from the Pacific Ocean in 2023" or "What's the average salinity in the Atlantic?"</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="Ask about temperature, salinity, pressure, or location..." onkeypress="handleKeyPress(event)">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+    
+    <div class="data-visualization" id="dataVisualization" style="display: none;">
+      <h3>Data Visualization</h3>
+      <canvas id="dataChart" width="600" height="300"></canvas>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
