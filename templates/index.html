@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>FloatChat ARGO</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <!-- Main Container -->
+    <div class="app-container">
+      <!-- Left Panel - Chat Interface -->
+      <div class="left-panel">
+        <div class="chat-header">
+          <div class="logo">
+            <span class="logo-icon">🌊</span>
+            <span class="logo-text">FloatChat ARGO</span>
+          </div>
+          <button class="menu-btn">☰</button>
+        </div>
+
+        <div class="chat-content">
+          <div class="chat-messages" id="chatMessages">
+            <!-- Chat messages will be populated here -->
+          </div>
+
+          <div class="message-input-area">
+            <div class="input-container">
+              <input
+                type="text"
+                id="userInput"
+                placeholder="Type a message..."
+                class="message-input"
+              />
+              <button onclick="sendMessage()" class="send-btn">🔍</button>
+            </div>
+
+            <div class="suggested-actions">
+              <button onclick="showProfileData()" class="action-btn">
+                Show profile data
+              </button>
+              <button onclick="suggestFloat()" class="action-btn">
+                Suggest another float
+              </button>
+              <button onclick="defineParameters()" class="action-btn">
+                Define parameters
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel - Data Visualization -->
+      <div class="right-panel">
+        <div class="data-header">
+          <h1>FloatChat ARGO</h1>
+          <div class="header-controls">
+            <button class="control-btn">⚙</button>
+            <button class="control-btn">☰</button>
+            <button class="control-btn">📤</button>
+          </div>
+        </div>
+
+        <div class="data-content">
+          <div class="float-info">
+            <p id="floatDescription">
+              Select a float to view detailed information and data profiles.
+            </p>
+          </div>
+
+          <div class="charts-container">
+            <div class="chart-section">
+              <h3>Temperature Profile</h3>
+              <canvas id="temperatureChart"></canvas>
+            </div>
+
+            <div class="chart-section">
+              <h3>Salinity Profile</h3>
+              <canvas id="salinityChart"></canvas>
+            </div>
+          </div>
+
+          <div class="data-tabs">
+            <div class="tab-buttons">
+              <button class="tab-btn active" data-tab="profile">
+                Profile Data
+              </button>
+              <button class="tab-btn" data-tab="metadata">Metadata</button>
+              <button class="tab-btn" data-tab="quality">Quality Flags</button>
+            </div>
+
+            <div class="tab-content">
+              <div id="profileTab" class="tab-panel active">
+                <table id="profileTable" class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Profile ID</th>
+                      <th>Date</th>
+                      <th>Lat.</th>
+                      <th>Lon.</th>
+                      <th>Depth</th>
+                      <th>Temp</th>
+                      <th>Salinity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Data will be populated here -->
+                  </tbody>
+                </table>
+              </div>
+
+              <div id="metadataTab" class="tab-panel">
+                <div class="metadata-content">
+                  <p>Metadata information will be displayed here.</p>
+                </div>
+              </div>
+
+              <div id="qualityTab" class="tab-panel">
+                <div class="quality-content">
+                  <p>
+                    Quality flags and data validation information will be
+                    displayed here.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters Sidebar -->
+      <div class="filters-sidebar">
+        <div class="filters-header">
+          <h3>Filters</h3>
+        </div>
+
+        <div class="filter-group">
+          <label>Region</label>
+          <select id="regionFilter" class="filter-select">
+            <option value="">All Regions</option>
+            <option value="atlantic">Atlantic</option>
+            <option value="pacific">Pacific</option>
+            <option value="indian">Indian</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Time</label>
+          <select id="timeFilter" class="filter-select">
+            <option value="">All Time</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Float Type</label>
+          <select id="floatTypeFilter" class="filter-select">
+            <option value="">All Types</option>
+            <option value="core">Core</option>
+            <option value="biogeochemical">Biogeochemical</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Parameters</label>
+          <select id="parametersFilter" class="filter-select">
+            <option value="">All Parameters</option>
+            <option value="temperature">Temperature</option>
+            <option value="salinity">Salinity</option>
+            <option value="pressure">Pressure</option>
+          </select>
+        </div>
+
+        <div class="export-section">
+          <h3>Export</h3>
+          <div class="export-buttons">
+            <button class="export-btn">CSV</button>
+            <button class="export-btn">Excel</button>
+            <button class="export-btn">NetCDF</button>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <h3>Help</h3>
+          <div class="help-links">
+            <a href="#" class="help-link">Documentation</a>
+            <a href="#" class="help-link">Tutorials</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
+</html>
