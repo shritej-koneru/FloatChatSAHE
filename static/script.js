@@ -40,8 +40,8 @@ const salinityData = {
 window.onload = function() {
   loadData();
   initializeCharts();
-  initializeSampleChat();
-  updateDataDisplay(); // Use filtered data from start
+  initializeEmptyChat();
+  // Don't populate data on start - keep everything empty
 };
 
 // Fetch dataset ranges on load
@@ -124,22 +124,36 @@ function initializeCharts() {
   }
 }
 
-// Initialize sample chat
-function initializeSampleChat() {
+// Initialize empty chat and middle section
+function initializeEmptyChat() {
   const chatMessages = document.getElementById("chatMessages");
   if (chatMessages) {
-    chatMessages.innerHTML = `
-      <div class="chat-message user">Where is float 12345 currently located?</div>
-      <div class="chat-message bot">Float 12345 is currently located in the South Atlantic Ocean, west of the coastline of Africa.</div>
-      <div class="chat-message user">Can I see its temperature and salinity profiles?</div>
-      <div class="chat-message bot">Sure! Here are the temperature and salinity profiles.</div>
-    `;
+    chatMessages.innerHTML = '';
   }
   
-  // Update float info
+  // Clear the middle section completely
   const floatDescription = document.getElementById("floatDescription");
   if (floatDescription) {
-    floatDescription.innerHTML = `Float ${sampleFloatData.id} was deployed in the ${sampleFloatData.deployment}. Its most recent position is at ${sampleFloatData.position}. Here are its temperature and salinity profiles over time and depth.`;
+    floatDescription.innerHTML = '';
+  }
+  
+  // Clear the data table
+  const tableBody = document.querySelector("#profileTable tbody");
+  if (tableBody) {
+    tableBody.innerHTML = '';
+  }
+  
+  // Clear charts
+  if (temperatureChart) {
+    temperatureChart.data.labels = [];
+    temperatureChart.data.datasets[0].data = [];
+    temperatureChart.update();
+  }
+  
+  if (salinityChart) {
+    salinityChart.data.labels = [];
+    salinityChart.data.datasets[0].data = [];
+    salinityChart.update();
   }
 }
 
@@ -162,7 +176,7 @@ function populateDataTable() {
 }
 
 // Send message function
-function sendMessage() {
+async function sendMessage() {
   const input = document.getElementById("userInput");
   const chatMessages = document.getElementById("chatMessages");
   const userText = input.value.trim();
@@ -174,36 +188,161 @@ function sendMessage() {
   userMessage.textContent = userText;
   chatMessages.appendChild(userMessage);
 
-  let response = "I'm processing your request about oceanographic data.";
-  const lower = userText.toLowerCase();
+  // Query the new search API
+  try {
+    const response = await fetch('/api/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: userText })
+    });
 
-  if (dataset) {
-    if (lower.includes("temperature")) {
-      response = `Temperature records range from ${dataset.temperature.min.toFixed(1)}°C to ${dataset.temperature.max.toFixed(1)}°C.`;
-    } else if (lower.includes("salinity")) {
-      response = `Salinity records range from ${dataset.salinity.min.toFixed(1)} PSU to ${dataset.salinity.max.toFixed(1)} PSU.`;
-    } else if (lower.includes("pressure")) {
-      response = `Pressure records range from ${dataset.pressure.min.toFixed(1)} dbar to ${dataset.pressure.max.toFixed(1)} dbar.`;
-    } else if (lower.includes("location") || lower.includes("latitude") || lower.includes("longitude")) {
-      response = `Float positions range from lat ${dataset.lat.min.toFixed(1)} to ${dataset.lat.max.toFixed(1)}, lon ${dataset.lon.min.toFixed(1)} to ${dataset.lon.max.toFixed(1)}.`;
-    } else if (lower.includes("float") && lower.includes("12345")) {
-      response = `Float 12345 is currently located in the South Atlantic Ocean. You can see its detailed profiles in the charts and data table.`;
+    const searchResult = await response.json();
+    let botResponse = searchResult.message || "Database not found.";
+    
+    const lower = userText.toLowerCase();
+
+    // Check if database was found (validate response)
+    if (searchResult.message === "Database not found") {
+      // Display "Database not found" and return early
+      setTimeout(() => {
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chat-message bot';
+        botMessage.textContent = "Database not found.";
+        chatMessages.appendChild(botMessage);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }, 500);
+      
+      input.value = "";
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return;
     }
-  } else {
-    response = "I'm still loading the dataset. Please try again in a moment.";
-  }
 
-  // Display bot response
-  setTimeout(() => {
-    const botMessage = document.createElement('div');
-    botMessage.className = 'chat-message bot';
-    botMessage.textContent = response;
-    chatMessages.appendChild(botMessage);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  }, 500);
+    // Handle successful data retrieval
+    if (searchResult.results && Object.keys(searchResult.results).length > 0) {
+      const data = searchResult.results;
+      
+      // Check for specific temperature and salinity profiles question (no float info)
+      if ((lower.includes("what") || lower.includes("show")) && 
+          lower.includes("temperature") && lower.includes("salinity") && lower.includes("profile") &&
+          !lower.includes("float")) {
+        botResponse = `Here are the detailed temperature and salinity profiles from our ${searchResult.data_type} database. Temperature ranges from ${data.temperature?.min?.toFixed(1)}°C to ${data.temperature?.max?.toFixed(1)}°C, while salinity ranges from ${data.salinity?.min?.toFixed(1)} PSU to ${data.salinity?.max?.toFixed(1)} PSU.`;
+        // Show ONLY the profiles view (charts + table, no float info)
+        showTemperatureAndSalinityProfiles();
+        updateDataWithSearchResults(data);
+      } 
+      // Float-specific questions with dynamic float number
+      else if (lower.includes("float")) {
+        // Extract float number from query if present
+        const floatMatch = userText.match(/float\s*(\d+)/i);
+        const floatNumber = floatMatch ? floatMatch[1] : null;
+        
+        if (searchResult.data_type === "float" || lower.includes("float")) {
+          botResponse = `Float ${floatNumber || 'data'} retrieved from our database. This includes oceanographic measurements: temperature (${data.temperature?.min?.toFixed(1)}°C to ${data.temperature?.max?.toFixed(1)}°C), salinity (${data.salinity?.min?.toFixed(1)} to ${data.salinity?.max?.toFixed(1)} PSU), and pressure (${data.pressure?.min?.toFixed(1)} to ${data.pressure?.max?.toFixed(1)} dbar).`;
+          
+          // Show float information with extracted number
+          showFloatInformation(floatNumber);
+          
+          // If this is a combined query (float + profiles), also show charts
+          if (lower.includes("profile") || lower.includes("temperature") || lower.includes("salinity")) {
+            showTemperatureAndSalinityProfiles();
+            updateDataWithSearchResults(data);
+          }
+        }
+      }
+      // Timeline/Geo questions
+      else if (lower.includes("timeline") || lower.includes("time") || lower.includes("geo")) {
+        if (searchResult.data_type === "geo") {
+          botResponse = `Timeline/geo data retrieved from our database covering coordinates from lat ${data.lat?.min?.toFixed(1)}° to ${data.lat?.max?.toFixed(1)}°, lon ${data.lon?.min?.toFixed(1)}° to ${data.lon?.max?.toFixed(1)}°.`;
+        }
+      }
+      // Temperature only questions
+      else if (lower.includes("temperature") && !lower.includes("salinity")) {
+        botResponse = `Temperature data from our ${searchResult.data_type} database ranges from ${data.temperature?.min?.toFixed(1)}°C to ${data.temperature?.max?.toFixed(1)}°C. These measurements were collected from oceanographic instruments.`;
+      }
+      // Salinity only questions
+      else if (lower.includes("salinity") && !lower.includes("temperature")) {
+        botResponse = `Salinity levels from our ${searchResult.data_type} database range from ${data.salinity?.min?.toFixed(1)} PSU to ${data.salinity?.max?.toFixed(1)} PSU, representing seawater salt content at various locations.`;
+      }
+      // Pressure questions
+      else if (lower.includes("pressure")) {
+        botResponse = `Pressure measurements from our ${searchResult.data_type} database range from ${data.pressure?.min?.toFixed(1)} dbar to ${data.pressure?.max?.toFixed(1)} dbar, corresponding to different ocean depths.`;
+      }
+      // Update global dataset for other functions
+      updateGlobalDataset(data);
+    }
+
+    // Display bot response
+    setTimeout(() => {
+      const botMessage = document.createElement('div');
+      botMessage.className = 'chat-message bot';
+      botMessage.textContent = botResponse;
+      chatMessages.appendChild(botMessage);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 500);
+
+  } catch (error) {
+    console.error("Error querying data:", error);
+    // Display error response
+    setTimeout(() => {
+      const botMessage = document.createElement('div');
+      botMessage.className = 'chat-message bot';
+      botMessage.textContent = "Database not found.";
+      chatMessages.appendChild(botMessage);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 500);
+  }
 
   input.value = "";
   chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Update global dataset variable with search results
+function updateGlobalDataset(data) {
+  if (data && typeof data === 'object') {
+    dataset = data;
+  }
+}
+
+// Update data displays with search results
+function updateDataWithSearchResults(data) {
+  if (data && typeof data === 'object') {
+    dataset = data;
+    // Update charts if they exist
+    if (temperatureChart && salinityChart) {
+      updateCharts();
+    }
+  }
+}
+
+// Show temperature and salinity profiles with full data visualization (charts + table only)
+function showTemperatureAndSalinityProfiles() {
+  // Update charts with actual data
+  updateCharts();
+  
+  // Populate the data table
+  populateDataTable();
+  
+  // Make sure the profile tab is active
+  showTab('profile');
+}
+
+// Show float information with dynamic float number
+function showFloatInformation(floatNumber = null) {
+  const floatDescription = document.getElementById("floatDescription");
+  if (floatDescription) {
+    const displayNumber = floatNumber || sampleFloatData.id;
+    floatDescription.innerHTML = `Float ${displayNumber} was deployed in the ${sampleFloatData.deployment}. Its most recent position is at ${sampleFloatData.position}. Here are its temperature and salinity profiles over time and depth.`;
+  }
+}
+
+// Update float information in middle section
+function updateFloatInformation() {
+  const floatDescription = document.getElementById("floatDescription");
+  if (floatDescription) {
+    floatDescription.innerHTML = `Float ${sampleFloatData.id} was deployed in the ${sampleFloatData.deployment}. Its most recent position is at ${sampleFloatData.position}. Here are its temperature and salinity profiles over time and depth.`;
+  }
 }
 
 // Handle Enter key in message input
